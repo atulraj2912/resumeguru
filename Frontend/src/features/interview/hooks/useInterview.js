@@ -73,18 +73,21 @@ export const useInterview = () => {
 
     const getResumePdf = async (interviewReportId) => {
         setLoading(true)
-        let response = null
         try {
-            response = await generateResumePdf({ interviewReportId })
-            const url = window.URL.createObjectURL(new Blob([ response ], { type: "application/pdf" }))
+            const responseData = await generateResumePdf({ interviewReportId })
+            const blob = responseData instanceof Blob ? responseData : new Blob([responseData], { type: "application/pdf" })
+            const url = window.URL.createObjectURL(blob)
             const link = document.createElement("a")
             link.href = url
             link.setAttribute("download", `resume_${interviewReportId}.pdf`)
             document.body.appendChild(link)
             link.click()
+            link.remove()
+            setTimeout(() => window.URL.revokeObjectURL(url), 1000)
         }
         catch (error) {
-            console.log(error)
+            console.error('getResumePdf error:', error)
+            alert(error.message || "Failed to generate PDF. Please try again.")
         } finally {
             setLoading(false)
         }

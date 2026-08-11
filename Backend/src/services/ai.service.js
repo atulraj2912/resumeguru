@@ -103,16 +103,36 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
 
 
+const chromium = require("@sparticuz/chromium")
+const puppeteerCore = require("puppeteer-core")
+
 async function generatePdfFromHtml(htmlContent) {
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--single-process'
-        ]
-    })
+    let browser
+    try {
+        const executablePath = await chromium.executablePath()
+        if (executablePath) {
+            browser = await puppeteerCore.launch({
+                args: chromium.args,
+                defaultViewport: chromium.defaultViewport,
+                executablePath: executablePath,
+                headless: chromium.headless,
+            })
+        } else {
+            throw new Error("No chromium executablePath found")
+        }
+    } catch (err) {
+        console.warn("Using standard puppeteer fallback:", err.message)
+        browser = await puppeteer.launch({
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--single-process'
+            ]
+        })
+    }
+
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" })
 
