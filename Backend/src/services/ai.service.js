@@ -50,22 +50,25 @@ const interviewReportSchema = z.object({
     title: z.string().describe("The title of the job for which the interview report is generated"),
 })
 
+const MODELS = [
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-3-flash-preview"
+]
+
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
-
-
     const prompt = `Generate an interview report for a candidate with the following details:
                         Resume: ${resume}
                         Self Description: ${selfDescription}
                         Job Description: ${jobDescription}
 `
 
-    // Retry wrapper for transient errors from the AI provider
-    const maxAttempts = 3
     let lastErr = null
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    for (const modelName of MODELS) {
         try {
             const response = await ai.models.generateContent({
-                model: "gemini-3-flash-preview",
+                model: modelName,
                 contents: prompt,
                 config: {
                     responseMimeType: "application/json",
@@ -82,23 +85,13 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
             }
         } catch (err) {
             lastErr = err
-            // If last attempt, throw a controlled error
-            if (attempt === maxAttempts) {
-                const e = new Error(err?.message || 'AI service error')
-                e.statusCode = err?.statusCode || 503
-                throw e
-            }
-            // exponential backoff with jitter
-            const delay = Math.round(500 * Math.pow(2, attempt - 1) * (0.7 + Math.random() * 0.6))
-            await new Promise(r => setTimeout(r, delay))
+            console.warn(`Model ${modelName} failed or rate-limited:`, err?.message || err)
         }
     }
-    // fallback if loop exits unexpectedly
-    const e = new Error(lastErr?.message || 'AI service error')
-    e.statusCode = lastErr?.statusCode || 503
+
+    const e = new Error(lastErr?.message || 'AI service quota exceeded across all models')
+    e.statusCode = 503
     throw e
-
-
 }
 
 
@@ -196,13 +189,11 @@ HTML FORMATTING:
 Return a JSON object with a single field "html" containing the complete HTML content.`
 
 
-    // Retry wrapper similar to generateInterviewReport
-    const maxAttemptsPdf = 3
     let lastErrPdf = null
-    for (let attempt = 1; attempt <= maxAttemptsPdf; attempt++) {
+    for (const modelName of MODELS) {
         try {
             const resp = await ai.models.generateContent({
-                model: "gemini-3-flash-preview",
+                model: modelName,
                 contents: prompt,
                 config: {
                     responseMimeType: "application/json",
@@ -223,17 +214,11 @@ Return a JSON object with a single field "html" containing the complete HTML con
             return pdfBuffer
         } catch (err) {
             lastErrPdf = err
-            if (attempt === maxAttemptsPdf) {
-                const e = new Error(err?.message || 'AI service error')
-                e.statusCode = err?.statusCode || 503
-                throw e
-            }
-            const delay = Math.round(500 * Math.pow(2, attempt - 1) * (0.7 + Math.random() * 0.6))
-            await new Promise(r => setTimeout(r, delay))
+            console.warn(`Model ${modelName} failed/rate-limited for PDF:`, err?.message || err)
         }
     }
-    const e2 = new Error(lastErrPdf?.message || 'AI service error')
-    e2.statusCode = lastErrPdf?.statusCode || 503
+    const e2 = new Error(lastErrPdf?.message || 'AI service quota exceeded across all models')
+    e2.statusCode = 503
     throw e2
 
 }
