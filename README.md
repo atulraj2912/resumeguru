@@ -154,8 +154,8 @@ The frontend application will be running at `http://localhost:5173`.
 
 ## 🌍 Deployment Summary
 
-- **Frontend**: Deploy `Frontend/` on **Vercel** or **Netlify** (Set build command to `npm run build` and root directory to `Frontend`).
-- **Backend**: Deploy `Backend/` on **Render** or **Railway** (Root directory: `Backend`, Start command: `node server.js`).
+- **Frontend**: Deploy `Frontend/` on **Vercel**(Set build command to `npm run build` and root directory to `Frontend`).
+- **Backend**: Deploy `Backend/` on **Render**(Root directory: `Backend`, Start command: `node server.js`).
 - **Database**: **MongoDB Atlas**.
 
 ---
